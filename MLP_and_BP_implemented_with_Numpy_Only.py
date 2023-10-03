@@ -176,16 +176,16 @@ class AbsLoss(AbsNet):
 
 
 class Linear(AbsModule):
-    def __init__(self,in_channels,out_channels,bias=True):
-        self.in_channels=in_channels
-        self.out_channels=out_channels
+    def __init__(self,in_features,out_features,bias=True):
+        self.in_features=in_features
+        self.out_features=out_features
         self.bias=bias
-
-        bound=1/math.sqrt(in_channels)
+        '''使用和torch.nn.Linear中一样参数初始化:参数a=sqrt(5),mode='fan_in'的kaiming_uniform_初始化'''
+        bound=1/math.sqrt(in_features)
         
-        self.parameters={"weights":Tensor((np.random.rand(in_channels,out_channels)-0.5)*2*bound)}
+        self.parameters={"weight":Tensor((np.random.rand(in_features,out_features)-0.5)*2*bound)}
         if bias:
-            self.parameters["bias"]=Tensor((np.random.rand(1,out_channels)-0.5)*2*bound)
+            self.parameters["bias"]=Tensor((np.random.rand(1,out_features)-0.5)*2*bound)
             
     def __call__(self,x):
         self.input=x
@@ -193,30 +193,30 @@ class Linear(AbsModule):
         return self.output
     
     def forward(self,x):
-        out=x @ self.parameters["weights"]
+        out=x @ self.parameters["weight"]
         if self.bias:
             out+=self.parameters["bias"]
         return out
     
     def backward(self,cgrad):
         try:
-            self.input.grad= cgrad @ self.parameters["weights"].T
+            self.input.grad= cgrad @ self.parameters["weight"].T
         except AttributeError:
             raise AttributeError("The layer: "+self.__repr__()+" absent from FP!")
-        self.parameters["weights"].grad+= self.input.T @ cgrad
+        self.parameters["weight"].grad+= self.input.T @ cgrad
         if self.bias:
             self.parameters["bias"].grad+= cgrad.sum(0,keepdims=True)
         return self.input.grad.copy()
     
     def __repr__(self):
-        return f"Linear(in_features={self.in_channels}, "+\
-        f"out_features={self.out_channels}, bias={self.bias})"
+        return f"Linear(in_features={self.in_features}, "+\
+        f"out_features={self.out_features}, bias={self.bias})"
     
     @property
     def zero_grad_(self):
         if "input" in self.__dict__.keys():
             self.input.zero_grad_
-        self.parameters["weights"].zero_grad_
+        self.parameters["weight"].zero_grad_
         if self.bias:
             self.parameters["bias"].zero_grad_
             
