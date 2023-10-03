@@ -18,93 +18,109 @@ def add_grad(func):
     return inner
 
 def add_grad_inplace(func):
-    def inner(self,*args,**kwargs):
-        ret=func(self,*args,**kwargs)
-        if isinstance(ret,np.ndarray):
-            ret.__class__=Tensor
-            ret.detach=False
-            ret.grad=func(self,*args,**kwargs)
+    def inner(self, *args, **kwargs):
+        grad = self.grad
+        ret = Tensor(func(self, *args, **kwargs))
+        ret.grad = getattr(grad, func.__name__)(*args, **kwargs)
         return ret
     return inner
 
-class Tensor(np.ndarray):
-    detach=False
 
-    def __new__(cls,input_array,requires_grad=True):
-        obj=np.asarray(input_array).view(cls) \
-        if type(input_array) in (list,Tensor,np.ndarray) \
-        else np.random.randn(*input_array).view(cls)
-        obj.grad=np.zeros(obj.shape)
+class Tensor(np.ndarray):
+    def __new__(cls, input_array, requires_grad=True):
+        if type(input_array) == tuple:
+            obj = np.random.randn(*input_array).view(cls)
+        else:
+            obj = np.asarray(input_array).view(cls)
+        obj.grad = np.zeros(obj.shape)
         return obj
+
     @add_grad
-    def mean(self,*args,**kwargs):
-        return super().mean(*args,**kwargs)
+    def mean(self, *args, **kwargs):
+        return super().mean(*args, **kwargs)
+
     @add_grad
-    def std(self,*args,**kwargs):
-        return super().std(*args,**kwargs)
+    def std(self, *args, **kwargs):
+        return super().std(*args, **kwargs)
+
     @add_grad
-    def sum(self,*args,**kwargs):
-        return super().sum(*args,**kwargs)
+    def sum(self, *args, **kwargs):
+        return super().sum(*args, **kwargs)
+
     @add_grad
-    def __add__(self,*args,**kwargs):
-        return super().__add__(*args,**kwargs)
+    def __add__(self, *args, **kwargs):
+        return super().__add__(*args, **kwargs)
+
     @add_grad
-    def __radd__(self,*args,**kwargs):
-        return super().__radd__(*args,**kwargs)
+    def __radd__(self, *args, **kwargs):
+        return super().__radd__(*args, **kwargs)
+
     @add_grad
-    def __sub__(self,*args,**kwargs):
-        return super().__sub__(*args,**kwargs)
+    def __sub__(self, *args, **kwargs):
+        return super().__sub__(*args, **kwargs)
+
     @add_grad
-    def __rsub__(self,*args,**kwargs):
-        return super().__rsub__(*args,**kwargs)
+    def __rsub__(self, *args, **kwargs):
+        return super().__rsub__(*args, **kwargs)
+
     @add_grad
-    def __mul__(self,*args,**kwargs):
-        return super().__mul__(*args,**kwargs)
+    def __mul__(self, *args, **kwargs):
+        return super().__mul__(*args, **kwargs)
+
     @add_grad
-    def __rmul__(self,*args,**kwargs):
-        return super().__rmul__(*args,**kwargs)
+    def __rmul__(self, *args, **kwargs):
+        return super().__rmul__(*args, **kwargs)
+
     @add_grad
-    def __pow__(self,*args,**kwargs):
-        return super().__pow__(*args,**kwargs)
+    def __pow__(self, *args, **kwargs):
+        return super().__pow__(*args, **kwargs)
+
     @add_grad
-    def __rtruediv__(self,*args,**kwargs):
-        return super().__rtruediv__(*args,**kwargs)
+    def __rtruediv__(self, *args, **kwargs):
+        return super().__rtruediv__(*args, **kwargs)
+
     @add_grad
-    def __truediv__(self,*args,**kwargs):
-        return super().__truediv__(*args,**kwargs)
+    def __truediv__(self, *args, **kwargs):
+        return super().__truediv__(*args, **kwargs)
+
     @add_grad
-    def __matmul__(self,*args,**kwargs):
-        return super().__matmul__(*args,**kwargs)
+    def __matmul__(self, *args, **kwargs):
+        return super().__matmul__(*args, **kwargs)
+
     @add_grad
-    def __rmatmul__(self,*args,**kwargs):
-        return super().__rmatmul__(*args,**kwargs)
-    
+    def __rmatmul__(self, *args, **kwargs):
+        return super().__rmatmul__(*args, **kwargs)
+
     @add_grad_inplace
-    def reshape(self,*args,**kwargs):
-        return super().reshape(*args,**kwargs)     
+    def view(self, *args, **kwargs):
+        return super().view(*args, **kwargs)
+
     @add_grad_inplace
-    def __getitem__(self,*args,**kwargs):
-        return super().__getitem__(*args,**kwargs)
-    
+    def reshape(self, *args, **kwargs):
+        return super().reshape(*args, **kwargs)
+
+    @add_grad_inplace
+    def __getitem__(self, *args, **kwargs):
+        return super().__getitem__(*args, **kwargs)
+
     @property
     def zero_grad_(self):
-        self.grad=np.zeros(self.grad.shape)
+        self.grad = np.zeros(self.grad.shape)
+
     @property
     def grad_fn(self):
         return "Leaf" if self.detach else "Node"
-    
-    def detach_(self,whether=True):
-        self.detach=whether
-        
+
+    def detach_(self, whether=True):
+        self.detach = whether
+
 
 def exp(x):
-    if hasattr(x,"__len__"):
-        return Tensor([exp(i) for i in x])
-    return math.exp(x)
+    return Tensor(np.exp(np.array(x)))
+
+
 def log(x):
-    if hasattr(x,"__len__"):
-        return Tensor([log(i) for i in x])
-    return math.log(x)
+    return Tensor(np.log(np.array(x)))
 
 
 
