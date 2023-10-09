@@ -166,10 +166,14 @@ class AbsModule(AbsNet):
 class AbsLoss(AbsNet):
     @abstractproperty
     def outgrad(self):pass
+    @abstractmethod
+    def forward(self,*args,**kwargs):pass
+    def __call__(self,*args,**kwargs):
+        return self.forward(*args,**kwargs)
     def backward(self):
         cgrad=self.outgrad
         for block_name,block in reversed(self.net.__dict__.items()):
-            if type(block).__base__ not in (AbsActivation,AbsModule,Module,):
+            if type(block).__base__.__base__ is not AbsNet:
                 continue
             cgrad=block.backward(cgrad)
 
@@ -293,9 +297,6 @@ class BCEWithLogitsLoss(AbsLoss):
         self.net=net
         self.reduction=reduction
         self.function=Sigmoid()
-        
-    def __call__(self,y,y_hat):
-        return self.forward(y,y_hat)
     
     def forward(self,y,y_hat):
         self.out=y
